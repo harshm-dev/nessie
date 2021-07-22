@@ -39,10 +39,12 @@ import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.platform.commons.util.ExceptionUtils;
 import org.junit.platform.commons.util.ReflectionUtils;
+import org.projectnessie.versioned.StringStoreWorker;
 import org.projectnessie.versioned.VersionStore;
 import org.projectnessie.versioned.persist.adapter.DatabaseAdapter;
 import org.projectnessie.versioned.persist.adapter.DatabaseAdapterConfig;
 import org.projectnessie.versioned.persist.adapter.DatabaseAdapterFactory;
+import org.projectnessie.versioned.persist.store.PersistVersionStore;
 import org.projectnessie.versioned.persist.tests.SystemPropertiesConfigurer;
 
 /**
@@ -136,6 +138,8 @@ public class DatabaseAdapterExtension
       Object assign;
       if (field.getType().isAssignableFrom(DatabaseAdapter.class)) {
         assign = databaseAdapter;
+      } else if (field.getType().isAssignableFrom(VersionStore.class)) {
+        assign = createStore(databaseAdapter);
       } else {
         throw new IllegalStateException("Cannot assign to " + field);
       }
@@ -166,6 +170,8 @@ public class DatabaseAdapterExtension
     Object assign;
     if (parameter.getType().isAssignableFrom(DatabaseAdapter.class)) {
       assign = databaseAdapter;
+    } else if (parameter.getType().isAssignableFrom(VersionStore.class)) {
+      assign = createStore(databaseAdapter);
     } else {
       throw new IllegalStateException("Cannot assign to " + parameter);
     }
@@ -241,6 +247,11 @@ public class DatabaseAdapterExtension
     TestConnectionProviderSource connectionProvider =
         context.getStore(NAMESPACE).get(KEY_STATICS, StaticAdapters.class).connectionProvider;
     return connectionProvider.updateConfig(c);
+  }
+
+  private static VersionStore<String, String, StringStoreWorker.TestEnum> createStore(
+      DatabaseAdapter databaseAdapter) {
+    return new PersistVersionStore<>(databaseAdapter, StringStoreWorker.INSTANCE);
   }
 
   private void assertValidFieldCandidate(Field field) {
